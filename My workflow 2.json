@@ -1,0 +1,441 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        0
+      ],
+      "id": "6c09dc08-c768-4a07-a356-a83f6036bb75",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search?engine=google_jobs&q=data+analyst&hl=en&api_key=488bcceca4634d00a7bcf04ee86711cad4068fd0ef256523cc8da969be66a4f9",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a4b976c2-63b4-4c5f-bcf4-90fd9a3beca8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract jobs_results from SerpAPI response\nconst jobs = items[0].json.jobs_results || [];\n\nreturn jobs.map(job => {\n  return {\n    json: {\n      title: job.title || \"\",\n      company: job.company_name || \"\",\n      location: job.location || \"\",\n      description: job.description || \"\",\n      link: job.link || \"\",\n      posted_at: job.detected_extensions?.posted_at || \"\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "fa45903f-e170-40a8-b0ae-1c310863755c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/score",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_text",
+              "value": "={{$json[\"title\"]}} at {{$json[\"company\"]}} in {{$json[\"location\"]}} - {{$json[\"description\"]}}"
+            },
+            {
+              "name": "skills",
+              "value": "Python, SQL, Excel, Power BI, Tableau"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "9da89096-2299-4cb7-b5e7-2d75daef09a7",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/cover-letter",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_text",
+              "value": "=${$json[\"title\"]} at ${$json[\"company\"]} in ${$json[\"location\"]} - ${$json[\"description\"]}\n"
+            },
+            {
+              "name": "skills",
+              "value": "Python, SQL, Excel, Power BI, Tableau"
+            },
+            {
+              "name": "applicant",
+              "value": "Namita Thakur"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "308b1f1d-2769-4bc4-bb14-ac634f0d30ce",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0325ee7-59ca-42f8-a846-e3efee922c3e",
+              "name": "title",
+              "value": "={{ $('Code').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "3996331a-37a4-42ee-8db5-51184c301935",
+              "name": "company",
+              "value": "={{ $('Code').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "9b006f8a-fd1d-4cea-a075-256946a925fa",
+              "name": "location",
+              "value": "={{ $('Code').item.json.location }}",
+              "type": "string"
+            },
+            {
+              "id": "ac9cf0a3-abe6-45dd-aabb-c30dbb858542",
+              "name": "description",
+              "value": "={{ $('Code').item.json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "0f935182-08f3-4210-b798-b5954f2248ab",
+              "name": "score",
+              "value": "={{ $('HTTP Request1').item.json.match_score }}",
+              "type": "string"
+            },
+            {
+              "id": "b522d878-6671-413f-a673-05433723d442",
+              "name": "cover_letter",
+              "value": "={{ $json.cover_letter }}",
+              "type": "string"
+            },
+            {
+              "id": "0b7bde6a-e1df-40b7-8aea-44ec9e995c37",
+              "name": "link",
+              "value": "={{ $('Code').item.json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "32b5f35a-2266-443b-834d-93be0ae3a59d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "sendTo": "namita21thakur@gmail.com",
+        "subject": "=Daily Job Matches",
+        "message": "={{ $json.emailBody }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        0
+      ],
+      "id": "b5d75b40-e4a6-4aba-b5bf-01f8f93ea14a",
+      "name": "Send a message",
+      "webhookId": "125424f4-4eb3-4c24-a430-7a43b1f6d1e7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sjG7HjQAnzcQ7mIp",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const topJobs = items.slice(0, 5);\n\nreturn topJobs.map(item => {\n  const data = item.json;\n\n  const emailBody = `\n    <h2>${data.Title || \"Untitled\"} at ${data.Company || \"Unknown Company\"}</h2>\n    <p><b>Location:</b> ${data.Location || \"Not Specified\"}</p>\n    <p><b>Score:</b> ${data.Score || \"N/A\"}</p>\n    <p><b>Cover Letter:</b><br>${data[\"Cover Letter\"] || \"\"}</p>\n    <p><a href=\"${data.link || \"#\"}\">Apply Here</a></p>\n    <hr>\n  `;\n\n  return {\n    json: {\n      title: data.Title,\n      company: data.Company,\n      location: data.Location,\n      score: data.Score,\n      cover_letter: data[\"Cover Letter\"],\n      link: data.link,\n      summary: `${data.Title} at ${data.Company} (${data.Location || \"Not Specified\"}) → Score: ${data.Score}`,\n      emailBody\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        0
+      ],
+      "id": "a2e16f6e-a81b-4916-8fc5-332fb65bef6a",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobs = items[0].json.jobs_results || [];\n\n// Limit to top 5\nreturn jobs.slice(0, 5).map(job => {\n  return {\n    json: {\n      title: job.title || \"\",\n      company: job.company_name || \"\",\n      location: job.location || \"\",\n      description: job.description || \"\",\n      link: job.link || \"\",\n      posted_at: job.detected_extensions?.posted_at || \"\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        144
+      ],
+      "id": "fadff9ae-7fc8-4e14-98c3-d76590393985",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1AKFFxd4J3ewiKG5lqPMLnJzYjfCe_36gcTpniWFweLE",
+          "mode": "list",
+          "cachedResultName": "part 2 ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AKFFxd4J3ewiKG5lqPMLnJzYjfCe_36gcTpniWFweLE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AKFFxd4J3ewiKG5lqPMLnJzYjfCe_36gcTpniWFweLE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "Company": "={{ $json.company }}",
+            "Location": "={{ $json.location }}",
+            "Description": "={{ $json.description }}",
+            "Score": "={{ $json.score }}",
+            "Cover Letter": "={{ $json.cover_letter }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cover Letter",
+              "displayName": "Cover Letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        0
+      ],
+      "id": "843e83d7-520d-4c8b-bdad-8c6d10158319",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "h9fRKqTit7VS1ImP",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bf51813b-7139-4f51-95ed-6fd468a33c04",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2efc7ef42a1a7e0d5a8f39825fbd9389908723edcf3dd0ec9c77a03e338b7548"
+  },
+  "id": "gU9YbOgg69NcSEZc",
+  "tags": []
+}
